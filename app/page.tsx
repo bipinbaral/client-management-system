@@ -267,4 +267,4 @@ export default function LandingPage() {
       </footer>
     </div>
   )
-}
+}// Updates for marketplace UI
