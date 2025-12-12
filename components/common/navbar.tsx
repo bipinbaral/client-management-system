@@ -1,98 +1,94 @@
-import React from "react";
+"use client"
 
-export default function Navbar() {
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Menu, X, User } from "lucide-react"
+import { useState } from "react"
+
+export function Navbar() {
+  const pathname = usePathname()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/clients", label: "Clients" },
+    { href: "/workouts", label: "Workouts" },
+    { href: "/payments", label: "Payments" },
+    { href: "/notes", label: "Notes" },
+    { href: "/profile", label: "Profile" },
+  ]
+
   return (
-    <div>
-      <nav className="bg-[#56cafb] fixed w-full z-20 top-0 start-0 border-b border-default">
-        <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-          <a
-            href="/"
-            className="flex items-center space-x-3 rtl:space-x-reverse"
-          >
-            <img
-              src="/brand-logo.svg"
-              className="h-7"
-              alt="Flowbite Logo"
-            />
-            <span className="self-center text-xl text-heading font-semibold whitespace-nowrap">
-              Flowbite
-            </span>
-          </a>
-          <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
-            <button
-              type="button"
-              className="text-white bg-brand hover:bg-brand-strong box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-3 py-2 focus:outline-none"
-            >
-              Get started
-            </button>
-            <button
-              data-collapse-toggle="navbar-sticky"
-              type="button"
-              className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-body rounded-base md:hidden hover:bg-neutral-secondary-soft hover:text-heading focus:outline-none focus:ring-2 focus:ring-neutral-tertiary"
-              aria-controls="navbar-sticky"
-              aria-expanded="false"
-            >
-              <span className="sr-only">Open main menu</span>
-              <svg
-                className="w-6 h-6"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="none"
-                viewBox="0 0 24 24"
+    <nav className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/dashboard" className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+              <span className="text-white font-bold text-lg">C</span>
+            </div>
+            <span className="text-xl font-bold text-gray-900">ClientMS</span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  pathname === link.href
+                    ? "gradient-primary text-white shadow-md"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
               >
-                <path
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-width="2"
-                  d="M5 7h14M5 12h14M5 17h14"
-                />
-              </svg>
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* User Menu */}
+          <div className="hidden md:flex items-center space-x-3">
+            <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+              <User className="w-5 h-5 text-gray-700" />
             </button>
           </div>
-          <div
-            className="items-center justify-between hidden w-full md:flex md:w-auto md:order-1"
-            id="navbar-sticky"
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <ul className="flex flex-col p-4 md:p-0 mt-4 font-medium border border-default rounded-base bg-neutral-secondary-soft md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-neutral-primary">
-              <li>
-                <a
-                  href="#"
-                  className="block py-2 px-3 text-white bg-brand rounded-sm md:bg-transparent md:text-fg-brand md:p-0"
-                  aria-current="page"
-                >
-                  Home
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="block py-2 px-3 text-heading rounded hover:bg-neutral-tertiary md:hover:bg-transparent md:border-0 md:hover:text-fg-brand md:p-0 md:dark:hover:bg-transparent"
-                >
-                  About
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="block py-2 px-3 text-heading rounded hover:bg-neutral-tertiary md:hover:bg-transparent md:border-0 md:hover:text-fg-brand md:p-0 md:dark:hover:bg-transparent"
-                >
-                  Services
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="block py-2 px-3 text-heading rounded hover:bg-neutral-tertiary md:hover:bg-transparent md:border-0 md:hover:text-fg-brand md:p-0 md:dark:hover:bg-transparent"
-                >
-                  Contact
-                </a>
-              </li>
-            </ul>
+            {isMenuOpen ? (
+              <X className="w-6 h-6 text-gray-700" />
+            ) : (
+              <Menu className="w-6 h-6 text-gray-700" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden border-t border-gray-200 bg-white animate-slide-in">
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setIsMenuOpen(false)}
+                className={`block px-3 py-2 rounded-lg font-medium transition-all ${
+                  pathname === link.href
+                    ? "gradient-primary text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
         </div>
-      </nav>
-    </div>
-  );
+      )}
+    </nav>
+  )
 }
