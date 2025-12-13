@@ -36,10 +36,10 @@ export function PublicNavbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center gradient-primary text-white font-bold text-xl shadow-lg`}>
-              M
+              C
             </div>
             <span className={`text-xl font-bold ${scrolled ? "text-gray-900" : "text-gray-900"}`}>
-              MarketPlace
+              Client Flow Dynamics
             </span>
           </Link>
 

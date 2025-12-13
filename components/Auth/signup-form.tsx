@@ -64,7 +64,7 @@ export function SignupForm({
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     id="name"
-                    placeholder="John Doe"
+                    placeholder="SafalXXXXX"
                     className="pl-10 h-11 rounded-xl"
                     required
                   />
@@ -92,7 +92,7 @@ export function SignupForm({
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+977-981XXXXXXX"
                     className="pl-10 h-11 rounded-xl"
                   />
                 </div>

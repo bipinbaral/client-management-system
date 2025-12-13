@@ -27,7 +27,7 @@ export function Navbar() {
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
               <span className="text-white font-bold text-lg">C</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">ClientMS</span>
+            <span className="text-xl font-bold text-gray-900">Client Flow Dynamics</span>
           </Link>
 
           {/* Desktop Navigation */}
