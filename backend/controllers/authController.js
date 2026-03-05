@@ -65,6 +65,7 @@ const login = async (req, res) => {
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                role: user.role,
             },
         });
     } catch (error) {
@@ -81,7 +82,7 @@ const login = async (req, res) => {
 // @access  Public
 const register = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, role } = req.body;
 
         // Validate input
         if (!name || !email || !password) {
@@ -110,6 +111,7 @@ const register = async (req, res) => {
             name,
             email,
             password: hashedPassword,
+            role: role || 'client'
         });
 
         // Generate JWT token
@@ -141,6 +143,7 @@ const register = async (req, res) => {
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                role: user.role,
             },
         });
     } catch (error) {
@@ -152,7 +155,70 @@ const register = async (req, res) => {
     }
 };
 
+// @desc    Get current user profile
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: user,
+        });
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+        });
+    }
+};
+
+// @desc    Get all users (Admin only)
+// @route   GET /api/auth/users
+// @access  Private/Admin
+const getUsers = async (req, res) => {
+    try {
+        const users = await User.find().sort({ createdAt: -1 });
+
+        // Log activity
+        await ActivityLog.log({
+            action: 'OTHER',
+            description: `Admin viewed system users list (${users.length} users)`,
+            user: req.user._id,
+            userName: req.user.name,
+            userEmail: req.user.email,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+            level: 'INFO'
+        });
+
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            data: users,
+        });
+    } catch (error) {
+        console.error('Get users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching users',
+        });
+    }
+};
+
 module.exports = {
     login,
     register,
+    getMe,
+    getUsers,
 };
+

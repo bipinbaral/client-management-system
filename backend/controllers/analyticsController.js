@@ -3,6 +3,7 @@ const Payment = require('../models/Payment');
 const Workout = require('../models/Workout');
 const Note = require('../models/Note');
 const ActivityLog = require('../models/ActivityLog');
+const User = require('../models/User');
 const { analyzeClientActivity, analyzeRevenueTrend } = require('../utils/algorithms/analytics');
 
 /**
@@ -11,7 +12,13 @@ const { analyzeClientActivity, analyzeRevenueTrend } = require('../utils/algorit
  * @access  Private
  */
 exports.getDashboardStats = async (req, res) => {
+    console.log('--- GET DASHBOARD STATS CALLED ---');
     try {
+        // Total system users
+        const totalUsers = await User.countDocuments();
+        const totalFreelancers = await User.countDocuments({ role: 'freelancer' });
+        const totalAdmins = await User.countDocuments({ role: 'admin' });
+
         // Total clients
         const totalClients = await Client.countDocuments();
         const activeClients = await Client.countDocuments({ status: 'Active' });
@@ -52,24 +59,40 @@ exports.getDashboardStats = async (req, res) => {
         const overduePayments = await Payment.countDocuments({ status: 'Overdue' });
         const pendingPayments = await Payment.countDocuments({ status: 'Pending' });
 
-        // Top workouts
-        const topWorkouts = await Workout.find({ isActive: true })
-            .sort({ popularity: -1 })
-            .limit(5)
-            .select('title difficulty category popularity');
+        // Total workouts
+        const totalWorkouts = await Workout.countDocuments();
 
         // Recent activity from logs
-        const recentActivity = await ActivityLog.getRecent(10);
+        const recentActivity = await ActivityLog.getRecent(15);
+
+        // Log activity
+        await ActivityLog.log({
+            action: 'OTHER',
+            description: 'Viewed admin dashboard statistics',
+            user: req.user._id,
+            userName: req.user.name,
+            userEmail: req.user.email,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+            level: 'INFO'
+        });
 
         res.status(200).json({
             success: true,
             data: {
                 clients: {
-                    total: totalClients,
+                    total: totalUsers, // Using system-wide count as "Total Users"
+                    clientCount: totalClients,
+                    freelancerCount: totalFreelancers,
+                    adminCount: totalAdmins,
                     active: activeClients,
                     inactive: inactiveClients,
                     newThisMonth: recentClients,
                     growthRate: clientGrowthRate
+                },
+                workouts: {
+                    total: totalWorkouts,
+                    growthRate: 5 // Placeholder for now
                 },
                 revenue: {
                     total: Math.round(totalRevenue * 100) / 100,
@@ -80,7 +103,6 @@ exports.getDashboardStats = async (req, res) => {
                     overdue: overduePayments,
                     pending: pendingPayments
                 },
-                topWorkouts,
                 recentActivity
             }
         });

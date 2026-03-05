@@ -1,13 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Menu, X, User } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { Menu, X, User, LogOut } from "lucide-react"
 import { useState } from "react"
+
 
 export function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
@@ -52,7 +55,19 @@ export function Navbar() {
             <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
               <User className="w-5 h-5 text-gray-700" />
             </button>
+            <button 
+              onClick={() => {
+                localStorage.removeItem("token")
+                localStorage.removeItem("user")
+                router.push("/auth/login")
+              }}
+              className="p-2 rounded-lg hover:bg-red-50 transition-colors text-red-500 hover:text-red-700"
+              title="Log Out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
+
 
           {/* Mobile Menu Button */}
           <button
@@ -86,8 +101,19 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <button
+              onClick={() => {
+                localStorage.removeItem("token")
+                localStorage.removeItem("user")
+                router.push("/auth/login")
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg font-medium text-red-600 hover:bg-red-50 transition-all flex items-center gap-2"
+            >
+              <LogOut className="w-5 h-5" /> Log Out
+            </button>
           </div>
         </div>
+
       )}
     </nav>
   )

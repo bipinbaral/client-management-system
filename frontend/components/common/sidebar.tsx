@@ -12,17 +12,22 @@ import {
   FileText,
   Briefcase,
   DollarSign,
-  Image as ImageIcon,
-  Dumbbell
+  ImageIcon,
+  LogOut,
+  Layers,
+  Terminal
 } from "lucide-react"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
+
   
-  // Determine role based on path (simulated)
-  const isFreelancer = pathname.startsWith("/freelancer")
+  // Links will be determined by role from localStorage
 
   const clientLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,15 +40,30 @@ export function Sidebar() {
 
   const freelancerLinks = [
     { href: "/freelancer/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/freelancer/services", label: "My Services", icon: Dumbbell },
-    { href: "/freelancer/bookings", label: "Bookings", icon: Briefcase },
+    { href: "/freelancer/services", label: "My Services", icon: Layers },
+    { href: "/freelancer/bookings", label: "Project Requests", icon: Briefcase },
     { href: "/freelancer/portfolio", label: "Portfolio", icon: ImageIcon },
     { href: "/freelancer/earnings", label: "Earnings", icon: DollarSign },
     { href: "/freelancer/messages", label: "Messages", icon: MessageSquare },
     { href: "/profile", label: "Profile", icon: Settings },
   ]
 
-  const links = isFreelancer ? freelancerLinks : clientLinks
+  const adminLinks = [
+    { href: "/admin", label: "Admin Panel", icon: LayoutDashboard },
+    { href: "/admin/users", label: "User Management", icon: Briefcase },
+    { href: "/admin/services", label: "Global Services", icon: Layers },
+    { href: "/admin/payments", label: "System Revenue", icon: DollarSign },
+    { href: "/profile", label: "Admin Settings", icon: Settings },
+  ]
+
+  // Determine user role from localStorage
+  const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {}
+  const role = user.role || 'client'
+  if (!user || (user.role !== 'client' && user.role !== 'freelancer' && user.role !== 'admin')) return null
+
+  const links = role === 'admin' ? adminLinks : (role === 'freelancer' ? freelancerLinks : clientLinks)
+  const isFreelancer = role === 'freelancer'
+  const isAdmin = role === 'admin'
 
   return (
     <aside 
@@ -100,17 +120,40 @@ export function Sidebar() {
           })}
         </nav>
         
-        {/* User Type Indicator */}
-        {!isCollapsed && (
-          <div className="mt-auto pt-6 border-t border-gray-100">
-            <div className={`px-4 py-2 rounded-lg text-xs font-medium text-center ${
-              isFreelancer ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
-            }`}>
-              {isFreelancer ? "Freelancer Account" : "Client Account"}
+        {/* Logout Button */}
+        <div className="mt-auto space-y-2 pt-4">
+          <button
+            onClick={() => {
+              localStorage.removeItem("token")
+              localStorage.removeItem("user")
+              router.push("/auth/login")
+            }}
+            className={`flex w-full items-center gap-3 px-3 py-3 rounded-xl transition-all group relative text-red-600 hover:bg-red-50 hover:text-red-700`}
+            title={isCollapsed ? "Log Out" : ""}
+          >
+            <div className="text-red-500 group-hover:text-red-700">
+              <LogOut className="w-5 h-5" />
             </div>
-          </div>
-        )}
+            {!isCollapsed && (
+              <span className="animate-fade-in whitespace-nowrap font-medium">
+                Log Out
+              </span>
+            )}
+          </button>
+
+          {/* User Type Indicator */}
+          {!isCollapsed && (
+            <div className="pt-2 border-t border-gray-100">
+              <div className={`px-4 py-2 rounded-lg text-xs font-medium text-center ${
+                isAdmin ? "bg-red-100 text-red-700" : (isFreelancer ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700")
+              }`}>
+                {isAdmin ? "Administrator" : (isFreelancer ? "Freelancer Account" : "Client Account")}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   )
 }
+

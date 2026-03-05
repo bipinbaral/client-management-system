@@ -4,32 +4,46 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Lock, User, AlertCircle } from "lucide-react"
+import { Lock, User, AlertCircle, Mail } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { authApi } from "@/lib/api"
+
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      if (username === "admin" && password === "admin123") {
-        router.push("/admin")
-      } else {
-        setError("Invalid admin credentials")
-        setIsLoading(false)
+    try {
+      const data = await authApi.login({ email, password });
+      
+      if (data.success) {
+        if (data.user.role !== 'admin') {
+          setError("Access denied. Admin credentials required.");
+          setIsLoading(false);
+          return;
+        }
+
+        // Store token and user data
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        router.push("/admin");
       }
-    }, 1000)
+    } catch (err: any) {
+      setError(err.message || "Invalid credentials. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -44,23 +58,12 @@ export default function AdminLoginPage() {
             </div>
             <CardTitle className="text-2xl font-bold text-center">Admin Login</CardTitle>
             <p className="text-sm text-gray-600 text-center">
-              Enter admin credentials to access the dashboard
+              Enter admin credentials to access the management panel
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               
-              {/* Demo Credentials Hint */}
-              <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-sm text-purple-800 mb-4">
-                <p className="font-semibold mb-1">Demo Admin Credentials:</p>
-                <div className="grid grid-cols-[80px_1fr] gap-1">
-                  <span className="text-purple-600">Username:</span>
-                  <span className="font-mono">admin</span>
-                  <span className="text-purple-600">Password:</span>
-                  <span className="font-mono">admin123</span>
-                </div>
-              </div>
-
               {error && (
                 <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl text-sm animate-fade-in">
                   <AlertCircle className="w-4 h-4" />
@@ -69,17 +72,17 @@ export default function AdminLoginPage() {
               )}
 
               <div>
-                <Label htmlFor="username" className="text-gray-700">Username</Label>
+                <Label htmlFor="email" className="text-gray-700">Email Address</Label>
                 <div className="relative mt-1">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="admin"
+                    id="email"
+                    type="email"
+                    placeholder="admin@gmail.com"
                     className="pl-10 h-12 rounded-xl border-gray-300"
                     required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>

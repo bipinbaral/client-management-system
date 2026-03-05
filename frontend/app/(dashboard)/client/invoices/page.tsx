@@ -3,34 +3,29 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Download, Filter } from "lucide-react"
+import { useState, useEffect } from "react"
+import { authApi } from "@/lib/api"
+
 
 export default function ClientInvoicesPage() {
-  const invoices = [
-    {
-      id: "INV-2024-001",
-      date: "Oct 25, 2024",
-      service: "E-commerce Website Development",
-      freelancer: "Alex Walker",
-      amount: "Rs.,200.00",
-      status: "Paid",
-    },
-    {
-      id: "INV-2024-002",
-      date: "Oct 10, 2024",
-      service: "Logo Design Refresh",
-      freelancer: "Sarah Chen",
-      amount: "Rs..00",
-      status: "Paid",
-    },
-    {
-      id: "INV-2024-003",
-      date: "Oct 30, 2024",
-      service: "Blog Content Writing (Milestone 1)",
-      freelancer: "Mike Johnson",
-      amount: "Rs..00",
-      status: "Pending",
-    },
-  ]
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const response = await authApi.getPayments()
+        setInvoices(response.data)
+      } catch (error: any) {
+        console.error("Failed to fetch invoices:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchInvoices()
+  }, [])
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -54,17 +49,26 @@ export default function ClientInvoicesPage() {
         </div>
 
         <div className="divide-y divide-gray-100">
-          {invoices.map((invoice) => (
-            <div key={invoice.id} className="grid grid-cols-6 gap-4 p-4 items-center hover:bg-gray-50 transition-colors">
-              <div className="col-span-1 font-mono text-sm text-gray-600">{invoice.id}</div>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : invoices.length > 0 ? invoices.map((invoice) => (
+            <div key={invoice._id} className="grid grid-cols-6 gap-4 p-4 items-center hover:bg-gray-50 transition-colors">
+              <div className="col-span-1 font-mono text-sm text-gray-600">{invoice.invoiceNumber}</div>
               <div className="col-span-2">
-                <p className="font-medium text-gray-900 truncate">{invoice.service}</p>
-                <p className="text-xs text-gray-500">{invoice.freelancer}</p>
+                <p className="font-medium text-gray-900 truncate">Service Payment</p>
+                <p className="text-xs text-gray-500">{invoice.paymentMethod}</p>
               </div>
-              <div className="col-span-1 text-sm text-gray-600">{invoice.date}</div>
-              <div className="col-span-1 font-bold text-gray-900">{invoice.amount}</div>
+              <div className="col-span-1 text-sm text-gray-600 font-mono">
+                {new Date(invoice.createdAt).toLocaleDateString()}
+              </div>
+              <div className="col-span-1 font-bold text-gray-900">Rs.{invoice.amount}</div>
               <div className="col-span-1 flex items-center justify-end gap-3">
-                <Badge variant={invoice.status === "Paid" ? "active" : "pending"} className={invoice.status === "Paid" ? "bg-green-100 text-green-700 border-green-200" : "bg-yellow-100 text-yellow-700 border-yellow-200"}>
+                <Badge 
+                  variant={invoice.status.toLowerCase() as any}
+                  className={invoice.status === "Paid" || invoice.status === "PAID" ? "bg-green-100 text-green-700 border-green-200" : "bg-yellow-100 text-yellow-700 border-yellow-200"}
+                >
                   {invoice.status}
                 </Badge>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-primary">
@@ -72,8 +76,11 @@ export default function ClientInvoicesPage() {
                 </Button>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="p-8 text-center text-gray-500 italic">No invoices found</div>
+          )}
         </div>
+
       </div>
     </div>
   )

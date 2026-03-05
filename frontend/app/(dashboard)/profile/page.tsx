@@ -1,11 +1,41 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import { authApi } from "@/lib/api"
 import { User, Mail, Phone, Lock, Camera } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+
 
 export default function ProfilePage() {
+  const [user, setUser] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await authApi.getProfile()
+        setUser(response.data)
+      } catch (error: any) {
+        console.error("Failed to fetch profile:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
       {/* Header */}
@@ -20,7 +50,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-6">
           <div className="relative">
             <div className="w-24 h-24 rounded-full gradient-primary flex items-center justify-center text-white text-3xl font-bold">
-              A
+              {user?.name?.charAt(0) || "U"}
             </div>
             <button className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-lg border-2 border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
               <Camera className="w-4 h-4 text-gray-700" />
@@ -40,28 +70,15 @@ export default function ProfilePage() {
       <div className="bg-white rounded-2xl border border-gray-200 p-8">
         <h2 className="text-xl font-bold text-gray-900 mb-6">Personal Information</h2>
         <form className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="first-name">First Name</Label>
-              <div className="relative mt-1">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="first-name"
-                  defaultValue="Admin"
-                  className="pl-10 h-12 rounded-xl"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="last-name">Last Name</Label>
-              <div className="relative mt-1">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="last-name"
-                  defaultValue="User"
-                  className="pl-10 h-12 rounded-xl"
-                />
-              </div>
+          <div>
+            <Label htmlFor="name">Full Name</Label>
+            <div className="relative mt-1">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                id="name"
+                defaultValue={user?.name}
+                className="pl-10 h-12 rounded-xl"
+              />
             </div>
           </div>
 
@@ -72,22 +89,16 @@ export default function ProfilePage() {
               <Input
                 id="email"
                 type="email"
-                defaultValue="admin@clientms.com"
+                defaultValue={user?.email}
                 className="pl-10 h-12 rounded-xl"
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="role">Role</Label>
             <div className="relative mt-1">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                id="phone"
-                type="tel"
-                defaultValue="+1 (555) 123-4567"
-                className="pl-10 h-12 rounded-xl"
-              />
+              <Badge className="px-3 py-2 rounded-xl">{user?.role}</Badge>
             </div>
           </div>
 
@@ -98,6 +109,7 @@ export default function ProfilePage() {
           </div>
         </form>
       </div>
+
 
       {/* Change Password */}
       <div className="bg-white rounded-2xl border border-gray-200 p-8">

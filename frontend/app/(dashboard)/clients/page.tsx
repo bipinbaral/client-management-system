@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { authApi } from "@/lib/api"
+
 import { Table } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Modal } from "@/components/ui/modal"
@@ -9,43 +11,29 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Search, Plus, Filter, User, Mail, Phone, Calendar } from "lucide-react"
 
+
 export default function ClientsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClient, setSelectedClient] = useState<any>(null)
+  const [clients, setClients] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const clients = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+1 (555) 123-4567",
-      plan: "Premium",
-      startDate: "2024-01-01",
-      endDate: "2024-12-31",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      phone: "+1 (555) 987-6543",
-      plan: "Basic",
-      startDate: "2024-01-15",
-      endDate: "2024-07-15",
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike@example.com",
-      phone: "+1 (555) 456-7890",
-      plan: "Premium",
-      startDate: "2023-06-01",
-      endDate: "2024-01-01",
-      status: "Expired",
-    },
-  ]
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const response = await authApi.getClients()
+        setClients(response.data)
+      } catch (error: any) {
+        console.error("Failed to fetch clients:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchClients()
+  }, [])
+
 
   const columns = [
     { key: "name", header: "Name" },
@@ -98,11 +86,20 @@ export default function ClientsPage() {
       </div>
 
       {/* Clients Table */}
-      <Table
-        columns={columns}
-        data={clients}
-        onRowClick={(client) => setSelectedClient(client)}
-      />
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <Table
+          columns={columns}
+          data={clients.filter(c => 
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.email.toLowerCase().includes(searchTerm.toLowerCase())
+          )}
+          onRowClick={(client) => setSelectedClient(client)}
+        />
+      )}
 
       {/* Add Client Modal */}
       <Modal

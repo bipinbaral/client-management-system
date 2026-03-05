@@ -6,9 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { Mail, Lock, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { authApi } from "@/lib/api"
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
+
+
 
 export function LoginForm({
   className,
@@ -19,21 +22,52 @@ export function LoginForm({
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const validateForm = () => {
+    if (!email) {
+      setError("Email is required")
+      return false
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError("Please enter a valid email address")
+      return false
+    }
+    if (!password) {
+      setError("Password is required")
+      return false
+    }
+    return true
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    if (!validateForm()) return
+
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      if (email === "john@example.com" && password === "user123") {
-        router.push("/dashboard")
-      } else {
-        setError("Invalid credentials. Please try again.")
-        setIsLoading(false)
+
+    try {
+      const data = await authApi.login({ email, password });
+      
+      if (data.success) {
+        // Store token and user data
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        if (data.user.role === 'admin') {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
       }
-    }, 1000)
+    } catch (err: any) {
+      setError(err.message || "Invalid credentials. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -48,16 +82,7 @@ export function LoginForm({
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             
-            {/* Demo Credentials Hint */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800 mb-4">
-              <p className="font-semibold mb-1">Demo Credentials:</p>
-              <div className="grid grid-cols-[60px_1fr] gap-1">
-                <span className="text-blue-600">Email:</span>
-                <span className="font-mono">john@example.com</span>
-                <span className="text-blue-600">Pass:</span>
-                <span className="font-mono">user123</span>
-              </div>
-            </div>
+
 
             {error && (
               <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl text-sm animate-fade-in">
@@ -94,14 +119,22 @@ export function LoginForm({
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="•••••••"
-                    className="pl-10 h-12 rounded-xl border-gray-300"
+                    className="pl-10 pr-10 h-12 rounded-xl border-gray-300"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
+
               </div>
             </div>
 

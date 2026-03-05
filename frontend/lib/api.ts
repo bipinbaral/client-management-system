@@ -1,0 +1,69 @@
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+
+export async function apiRequest(endpoint: string, options: RequestInit = {}) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    let errorMessage = data.message || 'Something went wrong';
+    if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+      errorMessage = data.errors[0].message;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}
+
+export const authApi = {
+  login: (credentials: any) => apiRequest('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  }),
+  register: (userData: any) => apiRequest('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(userData),
+  }),
+  getClients: (params: any = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/clients${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getDashboardStats: () => apiRequest('/analytics/dashboard', {
+    method: 'GET',
+  }),
+  getWorkouts: (params: any = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/workouts${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getPayments: (params: any = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/payments${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getUsers: () => apiRequest('/auth/users', {
+    method: 'GET',
+  }),
+  getProfile: () => apiRequest('/auth/me', {
+    method: 'GET',
+  }),
+};
+
+
+

@@ -1,56 +1,47 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import { authApi } from "@/lib/api"
 import { Table } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { DollarSign, Download, Filter } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
+
 export default function PaymentsPage() {
-  const payments = [
-    {
-      id: 1,
-      client: "John Doe",
-      amount: "Rs.",
-      date: "2024-01-15",
-      method: "Credit Card",
-      status: "Paid",
-      invoice: "#INV-001",
-    },
-    {
-      id: 2,
-      client: "Jane Smith",
-      amount: "Rs.",
-      date: "2024-01-14",
-      method: "PayPal",
-      status: "Paid",
-      invoice: "#INV-002",
-    },
-    {
-      id: 3,
-      client: "Mike Johnson",
-      amount: "Rs.",
-      date: "2024-01-10",
-      method: "Bank Transfer",
-      status: "Pending",
-      invoice: "#INV-003",
-    },
-    {
-      id: 4,
-      client: "Sarah Williams",
-      amount: "Rs.",
-      date: "2024-01-08",
-      method: "Credit Card",
-      status: "Paid",
-      invoice: "#INV-004",
-    },
-  ]
+  const [payments, setPayments] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const response = await authApi.getPayments()
+        setPayments(response.data)
+      } catch (error: any) {
+        console.error("Failed to fetch payments:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPayments()
+  }, [])
 
   const columns = [
-    { key: "invoice", header: "Invoice" },
-    { key: "client", header: "Client" },
-    { key: "amount", header: "Amount" },
-    { key: "date", header: "Date" },
-    { key: "method", header: "Payment Method" },
+    { key: "invoiceNumber", header: "Invoice" },
+    { key: "clientName", header: "Client" },
+    { 
+      key: "amount", 
+      header: "Amount",
+      render: (value: number) => `Rs.${value}`
+    },
+    { 
+      key: "date", 
+      header: "Date",
+      render: (value: string) => new Date(value).toLocaleDateString()
+    },
+    { key: "paymentMethod", header: "Payment Method" },
     {
       key: "status",
       header: "Status",
@@ -61,12 +52,13 @@ export default function PaymentsPage() {
   ]
 
   const totalRevenue = payments
-    .filter(p => p.status === "Paid")
-    .reduce((sum, p) => sum + parseInt(p.amount.replace("$", "")), 0)
+    .filter(p => p.status === "PAID" || p.status === "Paid")
+    .reduce((sum, p) => sum + (p.amount || 0), 0)
 
   const pendingAmount = payments
-    .filter(p => p.status === "Pending")
-    .reduce((sum, p) => sum + parseInt(p.amount.replace("$", "")), 0)
+    .filter(p => p.status === "PENDING" || p.status === "Pending")
+    .reduce((sum, p) => sum + (p.amount || 0), 0)
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -88,7 +80,7 @@ export default function PaymentsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">Total Revenue</p>
-              <h3 className="text-3xl font-bold text-gray-900">${totalRevenue}</h3>
+              <h3 className="text-3xl font-bold text-gray-900">Rs.{totalRevenue}</h3>
               <p className="text-sm text-green-600 mt-1">+12% from last month</p>
             </div>
             <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
@@ -101,7 +93,7 @@ export default function PaymentsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">Pending Payments</p>
-              <h3 className="text-3xl font-bold text-gray-900">${pendingAmount}</h3>
+              <h3 className="text-3xl font-bold text-gray-900">Rs.{pendingAmount}</h3>
               <p className="text-sm text-yellow-600 mt-1">{payments.filter(p => p.status === "Pending").length} pending</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-yellow-500 flex items-center justify-center">
@@ -109,6 +101,7 @@ export default function PaymentsPage() {
             </div>
           </div>
         </div>
+
 
         <div className="bg-white rounded-2xl border border-gray-200 p-6 card-hover">
           <div className="flex items-center justify-between">
@@ -129,6 +122,8 @@ export default function PaymentsPage() {
         <Input
           type="text"
           placeholder="Search payments..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1 h-12 rounded-xl"
         />
         <button className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
@@ -138,7 +133,19 @@ export default function PaymentsPage() {
       </div>
 
       {/* Payments Table */}
-      <Table columns={columns} data={payments} />
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <Table 
+          columns={columns} 
+          data={payments.filter(p => 
+            p.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+          )} 
+        />
+      )}
     </div>
   )
 }
