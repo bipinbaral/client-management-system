@@ -169,7 +169,7 @@ export default function FreelancerEarningsPage() {
         },
       ],
     }
-  }, [filteredPayments])
+  }, [filteredOrders])
 
   const lineOptions = {
     responsive: true,

@@ -63,7 +63,10 @@ export default function ServicesPage() {
         const ordersRes = await authApi.getClientServiceOrders()
         const ids =
           (ordersRes.data || [])
-            .map((o: any) => o.service?._id)
+            .map((o: any) => {
+              if (typeof o.service === "string") return o.service
+              return o.service?._id
+            })
             .filter(Boolean) || []
         setBookedServiceIds(ids)
       } catch (e) {

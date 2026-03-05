@@ -84,6 +84,61 @@ export default function DashboardPage() {
 
           setStats(mappedStats)
           setRecommendations((servicesRes.data || []).slice(0, 3))
+        } else if (currentUser?.role === 'freelancer') {
+          const [ordersRes, servicesRes] = await Promise.all([
+            authApi.getFreelancerServiceOrders(),
+            authApi.getPublicServices({}),
+          ])
+
+          const orders = ordersRes.data || []
+          const activeProjects = orders.filter(
+            (o: any) => o.status === 'pending' || o.status === 'accepted'
+          ).length
+          const completedProjects = orders.filter((o: any) => o.status === 'completed').length
+          const totalEarnings = orders
+            .filter((o: any) => o.status === 'completed')
+            .reduce((sum: number, o: any) => sum + (o.price || 0), 0)
+          const pendingInvoices = orders.filter((o: any) => o.status === 'pending').length
+          const clientIds = new Set(
+            orders
+              .map((o: any) => (typeof o.client === 'string' ? o.client : o.client?._id))
+              .filter(Boolean)
+          )
+          const totalClients = clientIds.size
+
+          const mappedStats = [
+            {
+              title: "Active Projects",
+              value: activeProjects.toString(),
+              icon: Briefcase,
+              trend: { value: "", isPositive: true },
+              gradient: "primary" as const,
+            },
+            {
+              title: "Total Earnings",
+              value: `Rs.${totalEarnings.toLocaleString()}`,
+              icon: CreditCard,
+              trend: { value: "", isPositive: true },
+              gradient: "secondary" as const,
+            },
+            {
+              title: "Pending Invoices",
+              value: pendingInvoices.toString(),
+              icon: Clock,
+              trend: { value: "", isPositive: true },
+              gradient: "accent" as const,
+            },
+            {
+              title: "Total Clients",
+              value: totalClients.toString(),
+              icon: CheckCircle,
+              trend: { value: "", isPositive: true },
+              gradient: "primary" as const,
+            },
+          ]
+
+          setStats(mappedStats)
+          setRecommendations((servicesRes.data || []).slice(0, 3))
         } else {
           const [statsRes, servicesRes] = await Promise.all([
             authApi.getDashboardStats(),
@@ -94,7 +149,7 @@ export default function DashboardPage() {
 
           const mappedStats = [
             {
-              title: currentUser?.role === 'freelancer' ? "Active Projects" : "Active Services",
+              title: "Active Services",
               value: data.clients.active.toString(),
               icon: Briefcase,
               trend: {
@@ -121,7 +176,7 @@ export default function DashboardPage() {
               gradient: "accent" as const,
             },
             {
-              title: currentUser?.role === 'freelancer' ? "Total Clients" : "Active Users",
+              title: "Active Users",
               value: data.clients.total.toString(),
               icon: CheckCircle,
               trend: { value: "0%", isPositive: true },
