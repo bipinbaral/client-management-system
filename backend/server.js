@@ -14,6 +14,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const countryRoutes = require('./routes/countryRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const projectRequestRoutes = require('./routes/projectRequestRoutes');
+const serviceOrderRoutes = require('./routes/serviceOrderRoutes');
 
 // Initialize Express app
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/countries', countryRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/requests', projectRequestRoutes);
+app.use('/api/service-orders', serviceOrderRoutes);
 
 
 // Health check route

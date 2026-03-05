@@ -27,11 +27,14 @@ export default function ServicesPage() {
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [bookedServiceIds, setBookedServiceIds] = useState<string[]>([])
 
   const fetchServices = async () => {
     try {
       setLoading(true)
       setError(null)
+      setSuccessMessage(null)
       const params: Record<string, string> = {}
       if (selectedCategory !== "All Categories") {
         params.category = selectedCategory
@@ -53,9 +56,43 @@ export default function ServicesPage() {
   }
 
   useEffect(() => {
-    fetchServices()
+    const load = async () => {
+      await fetchServices()
+
+      try {
+        const ordersRes = await authApi.getClientServiceOrders()
+        const ids =
+          (ordersRes.data || [])
+            .map((o: any) => o.service?._id)
+            .filter(Boolean) || []
+        setBookedServiceIds(ids)
+      } catch (e) {
+        // ignore, user might not be logged in
+      }
+    }
+
+    load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleBook = async (service: Service) => {
+    if (bookedServiceIds.includes(service._id)) return
+
+    try {
+      setLoading(true)
+      setError(null)
+      setSuccessMessage(null)
+      await authApi.createServiceOrder({ serviceId: service._id })
+      setSuccessMessage("Service booked successfully. The freelancer will review your request.")
+      setBookedServiceIds((prev) =>
+        prev.includes(service._id) ? prev : [...prev, service._id],
+      )
+    } catch (err: any) {
+      setError(err.message || "Failed to book service")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -93,6 +130,11 @@ export default function ServicesPage() {
             {error}
           </div>
         )}
+        {successMessage && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 mb-4">
+            {successMessage}
+          </div>
+        )}
 
         {/* Categories Tabs */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-4 custom-scrollbar">
@@ -116,7 +158,9 @@ export default function ServicesPage() {
 
         {/* Services Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service) => (
+          {services.map((service) => {
+            const isBooked = bookedServiceIds.includes(service._id)
+            return (
             <div
               key={service._id}
               className="group bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
@@ -159,12 +203,25 @@ export default function ServicesPage() {
                 </div>
                 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Starting at</span>
-                  <span className="text-xl font-bold text-gray-900">Rs. {service.price}</span>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">
+                      Starting at
+                    </span>
+                    <span className="text-xl font-bold text-gray-900">Rs. {service.price}</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="rounded-xl text-sm"
+                    onClick={() => handleBook(service)}
+                    disabled={loading || isBooked}
+                    variant={isBooked ? "outline" : "default"}
+                  >
+                    {isBooked ? "Booked" : "Book Service"}
+                  </Button>
                 </div>
               </div>
             </div>
-          ))}
+          )})}
           {!loading && services.length === 0 && (
             <p className="text-sm text-gray-500 col-span-full">
               No services found yet. Freelancers can add services from their dashboard.

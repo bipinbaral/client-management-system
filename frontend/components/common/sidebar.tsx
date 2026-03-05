@@ -43,7 +43,6 @@ export function Sidebar() {
     { href: "/freelancer/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/freelancer/services", label: "My Services", icon: Layers },
     { href: "/freelancer/bookings", label: "Project Requests", icon: Briefcase },
-    { href: "/freelancer/portfolio", label: "Portfolio", icon: ImageIcon },
     { href: "/freelancer/earnings", label: "Earnings", icon: DollarSign },
     { href: "/freelancer/messages", label: "Messages", icon: MessageSquare },
     { href: "/profile", label: "Profile", icon: Settings },

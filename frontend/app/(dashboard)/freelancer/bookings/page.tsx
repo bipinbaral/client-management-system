@@ -2,35 +2,35 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { authApi } from "@/lib/api"
 import { Clock, MoreHorizontal, CheckCircle2, XCircle } from "lucide-react"
 
-interface ProjectRequest {
+interface ServiceOrder {
   _id: string
-  title: string
-  description: string
-  budget: number
+  price: number
   status: string
-  deadline?: string
+  createdAt: string
+  service?: {
+    title: string
+    category: string
+  }
   client?: {
     name: string
     email: string
   }
-  createdAt: string
 }
 
 export default function FreelancerProjectRequestsPage() {
-  const [requests, setRequests] = useState<ProjectRequest[]>([])
+  const [orders, setOrders] = useState<ServiceOrder[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadRequests = async () => {
+  const loadOrders = async () => {
     try {
       setIsLoading(true)
       setError(null)
-      const res = await authApi.getFreelancerRequests()
-      setRequests(res.data || [])
+      const res = await authApi.getFreelancerServiceOrders()
+      setOrders(res.data || [])
     } catch (err: any) {
       setError(err.message || "Failed to load project requests")
     } finally {
@@ -39,15 +39,15 @@ export default function FreelancerProjectRequestsPage() {
   }
 
   useEffect(() => {
-    loadRequests()
+    loadOrders()
   }, [])
 
-  const updateStatus = async (req: ProjectRequest, status: string) => {
+  const updateStatus = async (order: ServiceOrder, status: string) => {
     try {
       setIsLoading(true)
       setError(null)
-      await authApi.updateProjectRequest(req._id, { status })
-      await loadRequests()
+      await authApi.updateServiceOrderStatus(order._id, { status })
+      await loadOrders()
     } catch (err: any) {
       setError(err.message || "Failed to update request")
     } finally {
@@ -90,44 +90,45 @@ export default function FreelancerProjectRequestsPage() {
           <div className="flex items-center justify-center p-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
-        ) : requests.length > 0 ? (
-          requests.map((req) => (
+        ) : orders.length > 0 ? (
+          orders.map((order) => (
             <div
-              key={req._id}
+              key={order._id}
               className="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-md transition-shadow"
             >
               <div className="flex flex-col md:flex-row justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm font-mono text-gray-500">REQ-{req._id.slice(-6).toUpperCase()}</span>
+                    <span className="text-sm font-mono text-gray-500">
+                      ORDER-{order._id.slice(-6).toUpperCase()}
+                    </span>
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColor(req.status)}`}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColor(order.status)}`}
                     >
-                      {req.status.replace("_", " ")}
+                      {order.status}
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">{req.title}</h3>
-                  <p className="text-gray-600 mb-2 line-clamp-2">{req.description}</p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">
+                    {order.service?.title || "Booked service"}
+                  </h3>
+                  <p className="text-gray-600 mb-2 line-clamp-2">
+                    {order.service?.category || "Service booking"}
+                  </p>
                   <p className="text-sm text-gray-500">
                     From:{" "}
                     <span className="font-medium text-gray-900">
-                      {req.client?.name || "Client"}
+                      {order.client?.name || "Client"}
                     </span>
-                    {req.client?.email && ` (${req.client.email})`}
+                    {order.client?.email && ` (${order.client.email})`}
                   </p>
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  <span className="text-2xl font-bold text-gray-900">Rs. {req.budget}</span>
+                  <span className="text-2xl font-bold text-gray-900">Rs. {order.price}</span>
                   <div className="flex items-center gap-1 text-sm text-gray-500 font-mono">
                     <Clock className="w-4 h-4" />
-                    {new Date(req.createdAt).toLocaleDateString()}
+                    {new Date(order.createdAt).toLocaleDateString()}
                   </div>
-                  {req.deadline && (
-                    <div className="text-xs text-gray-500">
-                      Deadline: <span className="font-medium">{new Date(req.deadline).toLocaleDateString()}</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -136,18 +137,18 @@ export default function FreelancerProjectRequestsPage() {
                   <Button
                     variant="outline"
                     className="flex-1 md:flex-none gap-2 rounded-xl"
-                    onClick={() => updateStatus(req, "accepted")}
-                    disabled={isLoading || req.status !== "pending"}
+                    onClick={() => updateStatus(order, "accepted")}
+                    disabled={isLoading || order.status !== "pending"}
                   >
                     <CheckCircle2 className="w-4 h-4" /> Accept
                   </Button>
                   <Button
                     variant="outline"
                     className="flex-1 md:flex-none gap-2 rounded-xl"
-                    onClick={() => updateStatus(req, "rejected")}
-                    disabled={isLoading || req.status !== "pending"}
+                    onClick={() => updateStatus(order, "completed")}
+                    disabled={isLoading || (order.status !== "accepted" && order.status !== "pending")}
                   >
-                    <XCircle className="w-4 h-4" /> Reject
+                    <XCircle className="w-4 h-4" /> Mark Completed
                   </Button>
                   <Button
                     variant="ghost"

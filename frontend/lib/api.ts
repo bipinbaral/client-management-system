@@ -102,6 +102,24 @@ export const authApi = {
   deleteProjectRequest: (id: string) => apiRequest(`/requests/${id}`, {
     method: 'DELETE',
   }),
+  // Service Orders (booked services)
+  createServiceOrder: (payload: any) => apiRequest('/service-orders', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  getClientServiceOrders: () => apiRequest('/service-orders/client', {
+    method: 'GET',
+  }),
+  getFreelancerServiceOrders: () => apiRequest('/service-orders/freelancer', {
+    method: 'GET',
+  }),
+  updateServiceOrderStatus: (id: string, payload: any) => apiRequest(`/service-orders/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  }),
+  getServiceEarningsSummary: () => apiRequest('/service-orders/earnings', {
+    method: 'GET',
+  }),
 };
 
 

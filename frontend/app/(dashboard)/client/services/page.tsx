@@ -1,36 +1,69 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Star, Filter } from "lucide-react"
-import { useState, useEffect } from "react"
 import { authApi } from "@/lib/api"
 
+interface Service {
+  _id: string
+  title: string
+  category: string
+  price: number
+  averageRating?: number
+  reviewCount?: number
+  owner?: {
+    name: string
+  }
+}
 
 export default function ClientServicesPage() {
-  const [services, setServices] = useState<any[]>([])
+  const [services, setServices] = useState<Service[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  const categories = [
+    "All Categories",
+    "Web Development",
+    "Graphic Design",
+    "Content Writing",
+    "Digital Marketing",
+    "Video & Animation",
+  ]
+
+  const fetchServices = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const res = await authApi.getPublicServices({})
+      setServices(res.data || [])
+    } catch (error: any) {
+      setError(error.message || "Failed to fetch services")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const response = await authApi.getWorkouts()
-        setServices(response.data)
-      } catch (error: any) {
-        console.error("Failed to fetch services:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchServices()
   }, [])
 
-  const categories = [
-    "All Categories", "Video Editing", "Web Development", "Graphic Design", "Content Writing", "Digital Marketing"
-  ]
-
+  const handleBook = async (service: Service) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      setSuccess(null)
+      await authApi.createServiceOrder({ serviceId: service._id })
+      setSuccess("Service booked successfully. The freelancer will review your request.")
+    } catch (error: any) {
+      setError(error.message || "Failed to book service")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -47,11 +80,27 @@ export default function ClientServicesPage() {
             />
           </div>
           
-          <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl px-6 bg-white">
-            <Filter className="w-4 h-4" /> Advanced Filters
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 h-12 rounded-xl px-6 bg-white"
+            onClick={fetchServices}
+            disabled={isLoading}
+          >
+            <Filter className="w-4 h-4" /> Refresh
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {success}
+        </div>
+      )}
 
       {/* Categories Tabs */}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2 custom-scrollbar">
@@ -85,7 +134,7 @@ export default function ClientServicesPage() {
                 </div>
                 <div className="absolute bottom-3 left-3 z-20">
                    <Badge className="bg-white/90 text-gray-900 hover:bg-white border-0 shadow-sm">
-                     {service.difficulty || 'Expert'}
+                     {service.category || 'Expert'}
                    </Badge>
                 </div>
               </div>
@@ -95,7 +144,9 @@ export default function ClientServicesPage() {
                   <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-bold">
                     PRO
                   </div>
-                  <span className="text-sm font-medium text-gray-700">Verified Freelancer</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {service.owner?.name || "Verified Freelancer"}
+                  </span>
                 </div>
                 
                 <h3 className="font-bold text-gray-900 text-lg mb-2 leading-snug group-hover:text-primary transition-colors cursor-pointer line-clamp-2 min-h-[3rem]">
@@ -104,13 +155,33 @@ export default function ClientServicesPage() {
                 
                 <div className="flex items-center gap-1 mb-4">
                   <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  <span className="font-semibold text-gray-900">{service.rating || '5.0'}</span>
-                  <span className="text-gray-500 text-sm">({service.totalRatings || '12'})</span>
+                  <span className="font-semibold text-gray-900">
+                    {service.averageRating && service.averageRating > 0
+                      ? service.averageRating.toFixed(1)
+                      : "New"}
+                  </span>
+                  {typeof service.reviewCount === "number" && service.reviewCount > 0 && (
+                    <span className="text-gray-500 text-sm">({service.reviewCount})</span>
+                  )}
                 </div>
                 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg Deliverability</span>
-                  <span className="text-xl font-bold text-gray-900 capitalize">Rs.{service.price || '499'}+</span>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">
+                      Starting at
+                    </span>
+                    <span className="text-xl font-bold text-gray-900 capitalize">
+                      Rs. {service.price}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="rounded-xl text-sm"
+                    onClick={() => handleBook(service)}
+                    disabled={isLoading}
+                  >
+                    Book
+                  </Button>
                 </div>
               </div>
             </div>

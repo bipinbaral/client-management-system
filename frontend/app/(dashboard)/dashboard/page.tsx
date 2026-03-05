@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { authApi } from "@/lib/api"
 import { StatsCard } from "@/components/ui/stats-card"
 import { Briefcase, CreditCard, Clock, CheckCircle } from "lucide-react"
@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [clientOrders, setClientOrders] = useState<any[]>([])
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -33,37 +34,134 @@ export default function DashboardPage() {
 
     const fetchDashboardData = async () => {
       try {
-        const [statsRes, workoutsRes] = await Promise.all([
-          authApi.getDashboardStats(),
-          authApi.getWorkouts({ limit: 2 })
-        ])
-        
-        const data = statsRes.data
+        if (currentUser?.role === 'client') {
+          const [ordersRes, servicesRes] = await Promise.all([
+            authApi.getClientServiceOrders(),
+            authApi.getPublicServices({}),
+          ])
 
+          const orders = ordersRes.data || []
+          setClientOrders(orders)
+          const totalBookings = orders.length
+          const activeBookings = orders.filter(
+            (o: any) => o.status === 'pending' || o.status === 'accepted'
+          ).length
+          const completedBookings = orders.filter((o: any) => o.status === 'completed').length
+          const totalSpent = orders
+            .filter((o: any) => o.status === 'completed')
+            .reduce((sum: number, o: any) => sum + (o.price || 0), 0)
 
-        // Map API data to stats cards format
-        const mappedStats = [
-          { title: currentUser?.role === 'freelancer' ? "Active Projects" : "Active Services", value: data.clients.active.toString(), icon: Briefcase, trend: { value: `${Math.abs(data.clients.growthRate)}%`, isPositive: data.clients.growthRate >= 0 }, gradient: "primary" as const },
-          { title: "Total Earnings", value: `Rs.${data.revenue.total}`, icon: CreditCard, trend: { value: `${Math.abs(data.revenue.growthRate)}%`, isPositive: data.revenue.growthRate >= 0 }, gradient: "secondary" as const },
-          { title: "Pending Invoices", value: data.payments.pending.toString(), icon: Clock, trend: { value: "0%", isPositive: true }, gradient: "accent" as const },
-          { title: currentUser?.role === 'freelancer' ? "Total Clients" : "Active Users", value: data.clients.total.toString(), icon: CheckCircle, trend: { value: "0%", isPositive: true }, gradient: "primary" as const },
-        ]
+          const mappedStats = [
+            {
+              title: "Total Bookings",
+              value: totalBookings.toString(),
+              icon: Briefcase,
+              trend: { value: "", isPositive: true },
+              gradient: "primary" as const,
+            },
+            {
+              title: "Active Jobs",
+              value: activeBookings.toString(),
+              icon: Clock,
+              trend: { value: "", isPositive: true },
+              gradient: "accent" as const,
+            },
+            {
+              title: "Completed Jobs",
+              value: completedBookings.toString(),
+              icon: CheckCircle,
+              trend: { value: "", isPositive: true },
+              gradient: "secondary" as const,
+            },
+            {
+              title: "Total Spent",
+              value: `Rs.${totalSpent.toLocaleString()}`,
+              icon: CreditCard,
+              trend: { value: "", isPositive: true },
+              gradient: "primary" as const,
+            },
+          ]
 
-        setStats(mappedStats)
-        setRecentActivity(data.recentActivity || [])
-        setRecommendations(workoutsRes.data || [])
+          setStats(mappedStats)
+          setRecommendations((servicesRes.data || []).slice(0, 3))
+        } else {
+          const [statsRes, servicesRes] = await Promise.all([
+            authApi.getDashboardStats(),
+            authApi.getPublicServices({}),
+          ])
+
+          const data = statsRes.data
+
+          const mappedStats = [
+            {
+              title: currentUser?.role === 'freelancer' ? "Active Projects" : "Active Services",
+              value: data.clients.active.toString(),
+              icon: Briefcase,
+              trend: {
+                value: `${Math.abs(data.clients.growthRate)}%`,
+                isPositive: data.clients.growthRate >= 0,
+              },
+              gradient: "primary" as const,
+            },
+            {
+              title: "Total Earnings",
+              value: `Rs.${data.revenue.total}`,
+              icon: CreditCard,
+              trend: {
+                value: `${Math.abs(data.revenue.growthRate)}%`,
+                isPositive: data.revenue.growthRate >= 0,
+              },
+              gradient: "secondary" as const,
+            },
+            {
+              title: "Pending Invoices",
+              value: data.payments.pending.toString(),
+              icon: Clock,
+              trend: { value: "0%", isPositive: true },
+              gradient: "accent" as const,
+            },
+            {
+              title: currentUser?.role === 'freelancer' ? "Total Clients" : "Active Users",
+              value: data.clients.total.toString(),
+              icon: CheckCircle,
+              trend: { value: "0%", isPositive: true },
+              gradient: "primary" as const,
+            },
+          ]
+
+          setStats(mappedStats)
+          setRecentActivity(data.recentActivity || [])
+          setRecommendations((servicesRes.data || []).slice(0, 3))
+        }
       } catch (error: any) {
-
         console.error("Failed to fetch dashboard data:", error)
       } finally {
         setIsLoading(false)
       }
-
     }
 
     fetchDashboardData()
   }, [router])
 
+
+  const clientThisMonthCount = useMemo(() => {
+    const start = new Date()
+    start.setDate(1)
+    return clientOrders.filter((o: any) => new Date(o.createdAt) >= start).length
+  }, [clientOrders])
+
+  const clientActiveCount = useMemo(
+    () => clientOrders.filter((o: any) => o.status === "pending" || o.status === "accepted").length,
+    [clientOrders],
+  )
+
+  const clientCompletedThisMonth = useMemo(() => {
+    const now = new Date()
+    return clientOrders.filter((o: any) => {
+      const d = new Date(o.createdAt)
+      return o.status === "completed" && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    }).length
+  }, [clientOrders])
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -71,12 +169,14 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-1">
-            {user?.role === 'freelancer' ? `Worker Dashboard: ${user?.name}` : `Welcome back, ${user?.name?.split(' ')[0] || 'User'}! 👋`}
+            {user?.role === 'freelancer'
+              ? `Worker Dashboard: ${user?.name}`
+              : `Welcome back, ${user?.name?.split(' ')[0] || 'User'}! 👋`}
           </h1>
           <p className="text-gray-600">
-            {user?.role === 'freelancer' 
-              ? "Manage your assigned clients and track your earnings." 
-              : "Here's what's happening with your projects."}
+            {user?.role === 'freelancer'
+              ? "Manage your assigned clients and track your earnings."
+              : "Track your bookings, spending, and recommended services in one place."}
           </p>
         </div>
 
@@ -87,7 +187,7 @@ export default function DashboardPage() {
             </Button>
           </Link>
         ) : (
-          <Link href="/client/services">
+          <Link href="/services">
             <Button className="gradient-primary text-white rounded-xl shadow-lg btn-lift">
               Browse New Services
             </Button>
@@ -144,22 +244,66 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Client analytics (simple bookings breakdown) */}
+        {user?.role === 'client' && (
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Your bookings overview</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  This month
+                </p>
+                <p className="text-2xl font-bold text-gray-900">{clientThisMonthCount}</p>
+                <p className="text-xs text-gray-400">Bookings started since the 1st</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  Active jobs
+                </p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {clientActiveCount}
+                </p>
+                <p className="text-xs text-gray-400">Waiting for freelancer action</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  Completed this month
+                </p>
+                <p className="text-2xl font-bold text-emerald-600">
+                  {clientCompletedThisMonth}
+                </p>
+                <p className="text-xs text-gray-400">Completed bookings this month</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Recommended For You */}
         <div className={`${user?.role === 'admin' ? '' : 'lg:col-span-3'} bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 text-white shadow-xl`}>
           <h2 className="text-xl font-bold mb-4">Top Services for You</h2>
-          <p className="text-blue-100 mb-6">Explore professional services like video editing, design, and more</p>
+          <p className="text-blue-100 mb-6">Explore curated services from our freelancers based on popularity and ratings.</p>
           
           <div className={`grid ${user?.role === 'admin' ? 'grid-cols-1' : 'md:grid-cols-3'} gap-4`}>
             {recommendations.length > 0 ? recommendations.map((item, idx) => (
               <div key={idx} className="bg-white/10 backdrop-blur-md rounded-xl p-4 hover:bg-white/20 transition-all cursor-pointer border border-white/10 hover:border-white/20">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold">{item.title}</h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 uppercase tracking-wider">{item.category || 'Freelance'}</span>
+                  <h3 className="font-semibold line-clamp-2">{item.title}</h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 uppercase tracking-wider">
+                    {item.category || 'Service'}
+                  </span>
                 </div>
-                <p className="text-xs text-blue-100 line-clamp-2 mb-2">{item.description || "Professional service tailored to your needs."}</p>
+                <p className="text-xs text-blue-100 line-clamp-2 mb-2">
+                  {item.owner?.name ? `By ${item.owner.name}` : "Freelance service"}
+                </p>
                 <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
-                   <span className="text-xs font-bold text-white">Rating: {item.rating || '4.9'}</span>
-                   <Button size="sm" className="h-7 text-[10px] bg-white text-blue-600 hover:bg-blue-50 py-0">View Details</Button>
+                  <span className="text-xs font-bold text-white">
+                    {item.averageRating && item.averageRating > 0
+                      ? `Rating: ${item.averageRating.toFixed(1)}`
+                      : "New"}
+                  </span>
+                  <span className="text-xs text-blue-100">
+                    {typeof item.price === "number" ? `Rs. ${item.price}` : ""}
+                  </span>
                 </div>
               </div>
             )) : (
