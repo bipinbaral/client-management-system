@@ -12,6 +12,8 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const noteRoutes = require('./routes/noteRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const countryRoutes = require('./routes/countryRoutes');
+const serviceRoutes = require('./routes/serviceRoutes');
+const projectRequestRoutes = require('./routes/projectRequestRoutes');
 
 // Initialize Express app
 const app = express();
@@ -35,6 +37,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/countries', countryRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/requests', projectRequestRoutes);
 
 
 // Health check route

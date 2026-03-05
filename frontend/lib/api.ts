@@ -63,6 +63,45 @@ export const authApi = {
   getProfile: () => apiRequest('/auth/me', {
     method: 'GET',
   }),
+  // Services (freelancer + public hiring side)
+  getPublicServices: (params: any = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/services${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getMyServices: () => apiRequest('/services/mine', {
+    method: 'GET',
+  }),
+  createService: (payload: any) => apiRequest('/services', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  updateService: (id: string, payload: any) => apiRequest(`/services/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  }),
+  deleteService: (id: string) => apiRequest(`/services/${id}`, {
+    method: 'DELETE',
+  }),
+  // Project Requests
+  getClientRequests: () => apiRequest('/requests/client', {
+    method: 'GET',
+  }),
+  getFreelancerRequests: () => apiRequest('/requests/freelancer', {
+    method: 'GET',
+  }),
+  createProjectRequest: (payload: any) => apiRequest('/requests', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  updateProjectRequest: (id: string, payload: any) => apiRequest(`/requests/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  }),
+  deleteProjectRequest: (id: string) => apiRequest(`/requests/${id}`, {
+    method: 'DELETE',
+  }),
 };
 
 

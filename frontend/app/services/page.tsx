@@ -1,84 +1,61 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { PublicNavbar } from "@/components/common/public-navbar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { authApi } from "@/lib/api"
 import { Search, Star, Filter } from "lucide-react"
 
-export default function ServicesPage() {
-  const services = [
-    {
-      id: 1,
-      title: "Professional Website Design & Development",
-      freelancer: "Alex Walker",
-      rating: 4.9,
-      reviews: 128,
-      price: 450,
-      image: "/placeholder-service-1.jpg",
-      category: "Web Development",
-      tags: ["React", "Next.js", "Tailwind"],
-    },
-    {
-      id: 2,
-      title: "Modern Logo Design & Branding Identity",
-      freelancer: "Sarah Chen",
-      rating: 5.0,
-      reviews: 84,
-      price: 200,
-      image: "/placeholder-service-2.jpg",
-      category: "Graphic Design",
-      tags: ["Logo", "Branding", "Minimalist"],
-    },
-    {
-      id: 3,
-      title: "SEO Optimized Content Writing",
-      freelancer: "Mike Johnson",
-      rating: 4.8,
-      reviews: 342,
-      price: 80,
-      image: "/placeholder-service-3.jpg",
-      category: "Content Writing",
-      tags: ["Blog", "SEO", "Copywriting"],
-    },
-    {
-      id: 4,
-      title: "Mobile App Development (iOS & Android)",
-      freelancer: "David Smith",
-      rating: 4.9,
-      reviews: 56,
-      price: 1200,
-      image: "/placeholder-service-4.jpg",
-      category: "Mobile Apps",
-      tags: ["Flutter", "React Native"],
-    },
-    {
-      id: 5,
-      title: "Social Media Marketing Strategy",
-      freelancer: "Emily Rose",
-      rating: 4.7,
-      reviews: 210,
-      price: 300,
-      image: "/placeholder-service-5.jpg",
-      category: "Digital Marketing",
-      tags: ["Instagram", "Facebook", "Growth"],
-    },
-    {
-      id: 6,
-      title: "Video Editing for YouTube & Ads",
-      freelancer: "Chris Lee",
-      rating: 4.9,
-      reviews: 95,
-      price: 150,
-      image: "/placeholder-service-6.jpg",
-      category: "Video Animation",
-      tags: ["Premiere Pro", "After Effects"],
-    },
-  ]
+interface Service {
+  _id: string
+  title: string
+  category: string
+  price: number
+  averageRating?: number
+  reviewCount?: number
+  owner?: {
+    name: string
+  }
+}
 
-  const categories = [
-    "All Categories", "Web Development", "Graphic Design", "Content Writing", "Digital Marketing", "Video Animation"
-  ]
+export default function ServicesPage() {
+  const [services, setServices] = useState<Service[]>([])
+  const [categories, setCategories] = useState<string[]>(["All Categories"])
+  const [selectedCategory, setSelectedCategory] = useState("All Categories")
+  const [search, setSearch] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchServices = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const params: Record<string, string> = {}
+      if (selectedCategory !== "All Categories") {
+        params.category = selectedCategory
+      }
+      if (search.trim()) {
+        params.query = search.trim()
+      }
+      const res = await authApi.getPublicServices(params)
+      const data: Service[] = res.data || []
+      setServices(data)
+
+      const cats = Array.from(new Set(data.map((s) => s.category))).sort()
+      setCategories(["All Categories", ...cats])
+    } catch (err: any) {
+      setError(err.message || "Failed to load services")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchServices()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,15 +71,28 @@ export default function ServicesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input 
                 placeholder="Search for any service..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 className="pl-10 h-12 rounded-xl bg-white border-gray-200 shadow-sm"
               />
             </div>
             
-            <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl px-6 bg-white">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 h-12 rounded-xl px-6 bg-white"
+              onClick={fetchServices}
+              disabled={loading}
+            >
               <Filter className="w-4 h-4" /> Filters
             </Button>
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 mb-4">
+            {error}
+          </div>
+        )}
 
         {/* Categories Tabs */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-4 custom-scrollbar">
@@ -110,10 +100,14 @@ export default function ServicesPage() {
             <button
               key={idx}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                idx === 0 
+                cat === selectedCategory
                   ? "bg-blue-600 text-white" 
                   : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
               }`}
+              onClick={() => {
+                setSelectedCategory(cat)
+                fetchServices()
+              }}
             >
               {cat}
             </button>
@@ -123,7 +117,10 @@ export default function ServicesPage() {
         {/* Services Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((service) => (
-            <div key={service.id} className="group bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div
+              key={service._id}
+              className="group bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+            >
               <div className="h-48 bg-gray-100 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10"></div>
                 {/* Placeholder Image */}
@@ -140,7 +137,9 @@ export default function ServicesPage() {
               <div className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-full bg-gray-200"></div>
-                  <span className="text-sm font-medium text-gray-700">{service.freelancer}</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {service.owner?.name || "Freelancer"}
+                  </span>
                 </div>
                 
                 <h3 className="font-bold text-gray-900 text-lg mb-2 leading-snug group-hover:text-primary transition-colors">
@@ -149,17 +148,28 @@ export default function ServicesPage() {
                 
                 <div className="flex items-center gap-1 mb-4">
                   <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  <span className="font-semibold text-gray-900">{service.rating}</span>
-                  <span className="text-gray-500 text-sm">({service.reviews})</span>
+                  <span className="font-semibold text-gray-900">
+                    {service.averageRating && service.averageRating > 0
+                      ? service.averageRating.toFixed(1)
+                      : "New"}
+                  </span>
+                  {typeof service.reviewCount === "number" && service.reviewCount > 0 && (
+                    <span className="text-gray-500 text-sm">({service.reviewCount})</span>
+                  )}
                 </div>
                 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Starting at</span>
-                  <span className="text-xl font-bold text-gray-900">${service.price}</span>
+                  <span className="text-xl font-bold text-gray-900">Rs. {service.price}</span>
                 </div>
               </div>
             </div>
           ))}
+          {!loading && services.length === 0 && (
+            <p className="text-sm text-gray-500 col-span-full">
+              No services found yet. Freelancers can add services from their dashboard.
+            </p>
+          )}
         </div>
       </div>
     </div>

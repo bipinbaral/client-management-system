@@ -17,7 +17,7 @@ import {
   Layers,
   Terminal
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 
@@ -25,6 +25,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [role, setRole] = useState<"client" | "freelancer" | "admin" | null>(null)
 
   
   // Links will be determined by role from localStorage
@@ -56,14 +57,31 @@ export function Sidebar() {
     { href: "/profile", label: "Admin Settings", icon: Settings },
   ]
 
-  // Determine user role from localStorage
-  const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {}
-  const role = user.role || 'client'
-  if (!user || (user.role !== 'client' && user.role !== 'freelancer' && user.role !== 'admin')) return null
+  // Determine user role from localStorage on client only
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("user")
+      if (!stored) {
+        setRole(null)
+        return
+      }
+      const parsed = JSON.parse(stored)
+      if (parsed.role === "client" || parsed.role === "freelancer" || parsed.role === "admin") {
+        setRole(parsed.role)
+      } else {
+        setRole(null)
+      }
+    } catch {
+      setRole(null)
+    }
+  }, [])
 
-  const links = role === 'admin' ? adminLinks : (role === 'freelancer' ? freelancerLinks : clientLinks)
-  const isFreelancer = role === 'freelancer'
-  const isAdmin = role === 'admin'
+  // Avoid rendering on server / before hydration so HTML matches
+  if (!role) return null
+
+  const links = role === "admin" ? adminLinks : role === "freelancer" ? freelancerLinks : clientLinks
+  const isFreelancer = role === "freelancer"
+  const isAdmin = role === "admin"
 
   return (
     <aside 
