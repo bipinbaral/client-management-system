@@ -120,6 +120,22 @@ export const authApi = {
   getServiceEarningsSummary: () => apiRequest('/service-orders/earnings', {
     method: 'GET',
   }),
+  // Activity Logs
+  getActivityLogs: (params: any = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/analytics/logs${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getSystemStats: () => apiRequest('/analytics/system', {
+    method: 'GET',
+  }),
+  getRevenueTrends: (params: any = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/analytics/revenue/trends${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
 };
 
 

@@ -16,7 +16,6 @@ export default function AdminLayout({
     { href: "/admin/users", label: "User Management", icon: Users },
     { href: "/admin/reports", label: "Reports", icon: FileText },
     { href: "/admin/logs", label: "Activity Logs", icon: Activity },
-    { href: "/admin/settings", label: "Settings", icon: Settings },
   ]
 
   return (

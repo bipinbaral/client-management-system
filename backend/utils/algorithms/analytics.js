@@ -198,7 +198,11 @@ const analyzeRevenueTrend = (payments, window = 7) => {
         growthRate: growth,
         movingAverage: movAvg,
         forecast: forecastValues,
-        standardDeviation: Math.round(standardDeviation(amounts) * 100) / 100
+        standardDeviation: Math.round(standardDeviation(amounts) * 100) / 100,
+        breakdown: sorted.map(p => ({
+            date: new Date(p.paidDate).toLocaleDateString(),
+            amount: p.amount || p.finalAmount
+        }))
     };
 };
 

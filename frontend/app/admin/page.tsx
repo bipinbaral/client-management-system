@@ -33,9 +33,8 @@ export default function AdminDashboardPage() {
   }
 
   const statCards = [
-    { title: "Total Users", value: stats?.clients?.total || 0, icon: Users, trend: { value: 12, isPositive: true }, gradient: "primary" as const },
-    { title: "Active Workouts", value: stats?.workouts?.total || 0, icon: Activity, trend: { value: 5, isPositive: true }, gradient: "secondary" as const },
-    { title: "Global Revenue", value: `Rs.${stats?.revenue?.total || 0}`, icon: Activity, trend: { value: 8, isPositive: true }, gradient: "accent" as const },
+    { title: "Total Users", value: stats?.clients?.total || 0, icon: Users, trend: { value: stats?.clients?.growthRate || 0, isPositive: (stats?.clients?.growthRate || 0) >= 0 }, gradient: "primary" as const },
+    { title: "Global Revenue", value: `Rs.${stats?.revenue?.total || 0}`, icon: Activity, trend: { value: stats?.revenue?.growthRate || 0, isPositive: (stats?.revenue?.growthRate || 0) >= 0 }, gradient: "accent" as const },
     { title: "System Health", value: "Optimal", icon: AlertCircle, trend: { value: 0, isPositive: true }, gradient: "primary" as const },
   ]
 

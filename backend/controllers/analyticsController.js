@@ -4,6 +4,7 @@ const Workout = require('../models/Workout');
 const Note = require('../models/Note');
 const ActivityLog = require('../models/ActivityLog');
 const User = require('../models/User');
+const ServiceOrder = require('../models/ServiceOrder');
 const { analyzeClientActivity, analyzeRevenueTrend } = require('../utils/algorithms/analytics');
 
 /**
@@ -19,8 +20,11 @@ exports.getDashboardStats = async (req, res) => {
         const totalFreelancers = await User.countDocuments({ role: 'freelancer' });
         const totalAdmins = await User.countDocuments({ role: 'admin' });
 
-        // Total clients
-        const totalClients = await Client.countDocuments();
+        // Total clients (Count from User model as role 'client' if Client collection is empty)
+        const realClients = await Client.countDocuments();
+        const clientUsers = await User.countDocuments({ role: 'client' });
+        const totalClientStats = Math.max(realClients, clientUsers);
+
         const activeClients = await Client.countDocuments({ status: 'Active' });
         const inactiveClients = await Client.countDocuments({ status: 'Inactive' });
 
@@ -41,19 +45,27 @@ exports.getDashboardStats = async (req, res) => {
 
         // Revenue statistics
         const paidPayments = await Payment.find({ status: 'Paid' });
-        const totalRevenue = paidPayments.reduce((sum, p) => sum + p.finalAmount, 0);
+        const completedOrders = await ServiceOrder.find({ status: 'completed' });
 
-        const recentRevenue = paidPayments
-            .filter(p => p.paidDate >= thirtyDaysAgo)
-            .reduce((sum, p) => sum + p.finalAmount, 0);
+        // Normalize revenue items
+        const allRevenueItems = [
+            ...paidPayments.map(p => ({ amount: p.finalAmount, date: p.paidDate || p.createdAt })),
+            ...completedOrders.map(o => ({ amount: o.price, date: o.updatedAt }))
+        ];
 
-        const previousRevenue = paidPayments
-            .filter(p => p.paidDate >= sixtyDaysAgo && p.paidDate < thirtyDaysAgo)
-            .reduce((sum, p) => sum + p.finalAmount, 0);
+        const totalRevenue = allRevenueItems.reduce((sum, item) => sum + item.amount, 0);
+
+        const recentRevenue = allRevenueItems
+            .filter(item => item.date >= thirtyDaysAgo)
+            .reduce((sum, item) => sum + item.amount, 0);
+
+        const previousRevenue = allRevenueItems
+            .filter(item => item.date >= sixtyDaysAgo && item.date < thirtyDaysAgo)
+            .reduce((sum, item) => sum + item.amount, 0);
 
         const revenueGrowthRate = previousRevenue > 0
             ? Math.round(((recentRevenue - previousRevenue) / previousRevenue) * 100)
-            : 100;
+            : recentRevenue > 0 ? 100 : 0;
 
         // Overdue payments
         const overduePayments = await Payment.countDocuments({ status: 'Overdue' });
@@ -82,10 +94,10 @@ exports.getDashboardStats = async (req, res) => {
             data: {
                 clients: {
                     total: totalUsers, // Using system-wide count as "Total Users"
-                    clientCount: totalClients,
+                    clientCount: totalClientStats,
                     freelancerCount: totalFreelancers,
                     adminCount: totalAdmins,
-                    active: activeClients,
+                    active: Math.max(activeClients, clientUsers), // Use larger count for active
                     inactive: inactiveClients,
                     newThisMonth: recentClients,
                     growthRate: clientGrowthRate
@@ -154,13 +166,24 @@ exports.getRevenueTrends = async (req, res) => {
 
         const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
 
-        const payments = await Payment.find({
+        const paidPayments = await Payment.find({
             status: 'Paid',
             paidDate: { $gte: startDate }
         }).sort({ paidDate: 1 });
 
+        const completedOrders = await ServiceOrder.find({
+            status: 'completed',
+            updatedAt: { $gte: startDate }
+        }).sort({ updatedAt: 1 });
+
+        // Normalize for analyzer
+        const normalizedItems = [
+            ...paidPayments.map(p => ({ amount: p.finalAmount, paidDate: p.paidDate || p.createdAt })),
+            ...completedOrders.map(o => ({ amount: o.price, paidDate: o.updatedAt }))
+        ].sort((a, b) => new Date(a.paidDate) - new Date(b.paidDate));
+
         // Use analytics algorithm for trend analysis
-        const trendAnalysis = analyzeRevenueTrend(payments, 7);
+        const trendAnalysis = analyzeRevenueTrend(normalizedItems, 7);
 
         res.status(200).json({
             success: true,
