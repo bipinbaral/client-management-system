@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { StatsCard } from "@/components/ui/stats-card"
 import { Briefcase, CreditCard, Clock, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { authApi } from "@/lib/api"
 
 interface ServiceOrder {
@@ -95,9 +96,11 @@ export default function FreelancerDashboardPage() {
             Track your active projects, earnings, and recent work based on real orders.
           </p>
         </div>
-        <Button className="gradient-primary text-white rounded-xl shadow-lg btn-lift">
-          Go to Earnings
-        </Button>
+        <Link href="/freelancer/earnings">
+          <Button className="gradient-primary text-white rounded-xl shadow-lg btn-lift">
+            Go to Earnings
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Grid */}

@@ -151,6 +151,14 @@ export default function FreelancerProjectRequestsPage() {
                     <XCircle className="w-4 h-4" /> Mark Completed
                   </Button>
                   <Button
+                    variant="destructive"
+                    className="flex-1 md:flex-none gap-2 rounded-xl"
+                    onClick={() => updateStatus(order, "rejected")}
+                    disabled={isLoading || order.status !== "pending"}
+                  >
+                    <XCircle className="w-4 h-4" /> Reject
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="icon"
                     className="rounded-xl"

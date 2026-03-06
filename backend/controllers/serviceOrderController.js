@@ -132,7 +132,7 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
-    if (!['accepted', 'completed', 'cancelled'].includes(status)) {
+    if (!['accepted', 'completed', 'cancelled', 'rejected'].includes(status)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid status',

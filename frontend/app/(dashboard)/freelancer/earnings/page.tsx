@@ -6,28 +6,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SelectHTMLAttributes } from "react"
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
   Legend,
-} from "chart.js"
-import { Line, Bar } from "react-chartjs-2"
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-)
+  Cell,
+} from "recharts"
 
 interface ServiceOrder {
   _id: string
@@ -44,7 +34,7 @@ export default function FreelancerEarningsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Paid")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("All")
   const [rangeFilter, setRangeFilter] = useState<RangeFilter>("last_30_days")
   const [customStart, setCustomStart] = useState("")
   const [customEnd, setCustomEnd] = useState("")
@@ -72,7 +62,16 @@ export default function FreelancerEarningsPage() {
     let list = orders
 
     if (statusFilter !== "All") {
-      list = list.filter((o) => o.status.toLowerCase() === statusFilter.toLowerCase())
+      list = list.filter((o) => {
+        const orderStatus = o.status.toLowerCase()
+        if (statusFilter === "Paid") {
+          return orderStatus === "completed"
+        }
+        if (statusFilter === "Pending") {
+          return orderStatus === "pending" || orderStatus === "accepted"
+        }
+        return orderStatus === statusFilter.toLowerCase()
+      })
     }
 
     const now = new Date()
@@ -119,9 +118,12 @@ export default function FreelancerEarningsPage() {
     }
   }, [filteredOrders])
 
-  const lineChartData = useMemo(() => {
+  const chartData = useMemo(() => {
     const buckets: Record<string, number> = {}
 
+    // We process ALL orders for the chart to show the trend, 
+    // but we color or filter based on status if needed. 
+    // Usually, "Earnings" graph shows completed (paid) earnings.
     filteredOrders.forEach((o) => {
       const d = new Date(o.createdAt)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
@@ -131,84 +133,30 @@ export default function FreelancerEarningsPage() {
       }
     })
 
-    const labels = Object.keys(buckets).sort()
-    return {
-      labels,
-      datasets: [
-        {
-          label: "Paid earnings (Rs.)",
-          data: labels.map((k) => buckets[k]),
-          borderColor: "rgb(59,130,246)",
-          backgroundColor: "rgba(59,130,246,0.1)",
-          tension: 0.3,
-          fill: true,
-        },
-      ],
-    }
+    return Object.keys(buckets)
+      .sort()
+      .map((key) => ({
+        name: key,
+        earnings: buckets[key],
+      }))
   }, [filteredOrders])
 
-  const barChartData = useMemo(() => {
-    const bySubscription: Record<string, number> = {}
+  const barData = useMemo(() => {
+    const byCategory: Record<string, number> = {}
 
     filteredOrders.forEach((o) => {
-      const key = "Services"
-      if (!bySubscription[key]) bySubscription[key] = 0
+      const key = "Services" // In a real app, this might come from o.service.category
+      if (!byCategory[key]) byCategory[key] = 0
       if (o.status === "completed") {
-        bySubscription[key] += o.price || 0
+        byCategory[key] += o.price || 0
       }
     })
 
-    const labels = Object.keys(bySubscription)
-    return {
-      labels,
-      datasets: [
-        {
-          label: "Revenue by subscription",
-          data: labels.map((k) => bySubscription[k]),
-          backgroundColor: "rgba(34,197,94,0.6)",
-        },
-      ],
-    }
+    return Object.keys(byCategory).map((key) => ({
+      name: key,
+      value: byCategory[key],
+    }))
   }, [filteredOrders])
-
-  const lineOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-      },
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: (value: number | string) => `Rs. ${value}`,
-        },
-      },
-    },
-  }
-
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-      },
-      y: {
-        beginAtZero: true,
-      },
-    },
-  }
 
   const onRangeChange: SelectHTMLAttributes<HTMLSelectElement>["onChange"] = (e) => {
     const value = e.target.value as RangeFilter
@@ -314,8 +262,37 @@ export default function FreelancerEarningsPage() {
             <h2 className="text-sm font-semibold text-gray-800">Earnings over time</h2>
           </div>
           <div className="h-64">
-            {lineChartData.labels.length > 0 ? (
-              <Line options={lineOptions} data={lineChartData} />
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 12, fill: '#9ca3af' }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 12, fill: '#9ca3af' }}
+                    tickFormatter={(value) => `Rs.${value}`}
+                  />
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    formatter={(value: number) => [`Rs. ${value.toLocaleString()}`, 'Earnings']}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="earnings" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3} 
+                    dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-gray-400">
                 Not enough data to display chart.
@@ -329,8 +306,32 @@ export default function FreelancerEarningsPage() {
             <h2 className="text-sm font-semibold text-gray-800">Revenue by subscription</h2>
           </div>
           <div className="h-64">
-            {barChartData.labels.length > 0 ? (
-              <Bar options={barOptions} data={barChartData} />
+            {barData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 12, fill: '#9ca3af' }}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 12, fill: '#9ca3af' }}
+                  />
+                  <RechartsTooltip 
+                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                     cursor={{ fill: '#f8fafc' }}
+                  />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {barData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#22c55e' : '#3b82f6'} fillOpacity={0.8} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-gray-400">
                 Not enough data to display chart.
